@@ -1,0 +1,18 @@
+# ビルド成果物（GitHub Releases で配布）
+astral-drive
+astral-drive.exe
+astral-drive-linux
+astral-drive-linux-amd64
+astral-drive-darwin-amd64
+astral-drive-darwin-arm64
+astral-drive-mac
+astral-drive-windows-amd64.exe
+dist/
+
+# 個人開発環境設定（パスがハードコードされているため）
+scripts/sync-wsl.ps1
+
+# エディタ・IDE
+.claude/
+.vscode/
+.idea/
