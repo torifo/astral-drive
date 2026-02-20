@@ -12,6 +12,9 @@ dist/
 # 個人開発環境設定（パスがハードコードされているため）
 scripts/sync-wsl.ps1
 
+# 仕様書（ローカル管理）
+spec/
+
 # エディタ・IDE
 .claude/
 .vscode/
