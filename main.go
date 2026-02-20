@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	"astral-drive/internal/env"
 	"astral-drive/internal/processor"
@@ -13,13 +14,14 @@ import (
 )
 
 func main() {
-	topN := flag.Int("n", 20, "表示件数")
+	topN    := flag.Int("n", 20, "表示件数")
 	workers := flag.Int("w", runtime.NumCPU()*2, "Worker 数")
 	noColor := flag.Bool("no-color", false, "カラー出力を無効化")
+	exclude := flag.String("exclude", "", "除外するディレクトリ名（カンマ区切り）例: node_modules,.git")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: astral-drive [flags] [path]\n\nFlags:\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nExample:\n  astral-drive\n  astral-drive -n 10 /home\n  astral-drive C:\\\n")
+		fmt.Fprintf(os.Stderr, "\nExample:\n  astral-drive\n  astral-drive -n 10 /home\n  astral-drive -exclude node_modules,.git C:\\\n")
 	}
 	flag.Parse()
 
@@ -36,9 +38,20 @@ func main() {
 		roots = env.Detect()
 	}
 
+	// 除外リストを解析
+	var excludeList []string
+	if *exclude != "" {
+		for _, e := range strings.Split(*exclude, ",") {
+			if t := strings.TrimSpace(e); t != "" {
+				excludeList = append(excludeList, t)
+			}
+		}
+	}
+
 	// スキャン実行
 	cfg := scanner.Config{
 		Workers: *workers,
+		Exclude: excludeList,
 	}
 	result, err := scanner.Run(roots, cfg)
 	if err != nil {

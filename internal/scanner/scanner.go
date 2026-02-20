@@ -13,6 +13,7 @@ import (
 // Config はスキャナーの実行オプション．
 type Config struct {
 	Workers int
+	Exclude []string // スキップするディレクトリ名（例: ["node_modules", ".git"]）
 }
 
 // Result はスキャン完了後の集計結果．
@@ -44,6 +45,16 @@ func (s *sizeMap) toMap() map[string]int64 {
 	return out
 }
 
+// isExcluded はディレクトリ名が除外リストに含まれるか判定する．
+func isExcluded(name string, exclude []string) bool {
+	for _, ex := range exclude {
+		if name == ex {
+			return true
+		}
+	}
+	return false
+}
+
 // Run は roots を起点に Worker Pool でディレクトリを並列走査し，Result を返す．
 func Run(roots []string, cfg Config) (*Result, error) {
 	start := time.Now()
@@ -57,7 +68,7 @@ func Run(roots []string, cfg Config) (*Result, error) {
 	for i := 0; i < cfg.Workers; i++ {
 		go func() {
 			for path := range dirQueue {
-				scanDir(path, dirQueue, sizes, &wg, &totalDirs)
+				scanDir(path, dirQueue, sizes, &wg, &totalDirs, cfg.Exclude)
 				wg.Done()
 			}
 		}()
@@ -87,6 +98,7 @@ func scanDir(
 	sizes *sizeMap,
 	wg *sync.WaitGroup,
 	totalDirs *int64,
+	exclude []string,
 ) {
 	atomic.AddInt64(totalDirs, 1)
 	fmt.Fprintf(os.Stderr, "\r  scanning... %d dirs", atomic.LoadInt64(totalDirs))
@@ -110,13 +122,16 @@ func scanDir(
 		}
 
 		if entry.IsDir() {
+			if isExcluded(entry.Name(), exclude) {
+				continue
+			}
 			subPath := filepath.Join(path, entry.Name())
 			wg.Add(1)
 			select {
 			case dirQueue <- subPath:
 			default:
 				// チャンネルが満杯の場合はこの goroutine で同期処理
-				scanDir(subPath, dirQueue, sizes, wg, totalDirs)
+				scanDir(subPath, dirQueue, sizes, wg, totalDirs, exclude)
 				wg.Done()
 			}
 		} else {
